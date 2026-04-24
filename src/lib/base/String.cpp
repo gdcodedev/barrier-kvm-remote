@@ -15,6 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <cstdint>
 #include "arch/Arch.h"
 #include "base/String.h"
 #include "common/common.h"

@@ -216,6 +216,12 @@ Client::getServerAddress() const
     return m_serverAddress;
 }
 
+void
+Client::setServerAddress(const NetworkAddress& addr)
+{
+    m_serverAddress = addr;
+}
+
 void*
 Client::getEventTarget() const
 {

@@ -284,22 +284,16 @@ function IsIA64: boolean;
 	Gets whether the computer is IA64 (Itanium 64 bits).
 }
 begin
-	Result := (not isForcedX86) and Is64BitInstallMode and (ProcessorArchitecture = paIA64);
+	Result := false; // ia64 (Itanium) removed in Inno Setup 6
 end;
 
 function GetString(x86, x64, ia64: String): String;
 {
 	Gets a string depending on the computer architecture.
-	Parameters:
-		x86: the string if the computer is x86
-		x64: the string if the computer is x64
-		ia64: the string if the computer is IA64
 }
 begin
 	if IsX64() and (x64 <> '') then begin
 		Result := x64;
-	end else if IsIA64() and (ia64 <> '') then begin
-		Result := ia64;
 	end else begin
 		Result := x86;
 	end;
@@ -308,13 +302,11 @@ end;
 function GetArchitectureString(): String;
 {
 	Gets the "standard" architecture suffix string.
-	Returns either _x64, _ia64 or nothing.
+	Returns either _x64 or nothing.
 }
 begin
 	if IsX64() then begin
 		Result := '_x64';
-	end else if IsIA64() then begin
-		Result := '_ia64';
 	end else begin
 		Result := '';
 	end;

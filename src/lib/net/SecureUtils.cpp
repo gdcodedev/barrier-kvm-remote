@@ -43,6 +43,7 @@
     THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <cstdint>
 #include "SecureUtils.h"
 #include "base/String.h"
 #include "base/finally.h"

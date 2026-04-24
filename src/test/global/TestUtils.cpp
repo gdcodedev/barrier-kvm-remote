@@ -15,8 +15,9 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "TestUtils.h"
+#include <cstdint>
 #include <random>
+#include "TestUtils.h"
 
 namespace barrier {
 

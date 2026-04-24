@@ -62,7 +62,8 @@ ClientApp::ClientApp(IEventQueue* events, CreateTaskBarReceiverFunc createTaskBa
     App(events, createTaskBarReceiver, new ClientArgs()),
     m_client(NULL),
     m_clientScreen(NULL),
-    m_serverAddress(NULL)
+    m_serverAddress(NULL),
+    m_currentAddressIndex(0)
 {
 }
 
@@ -82,19 +83,60 @@ ClientApp::parseArgs(int argc, const char* const* argv)
     else {
         // save server address
         if (!args().m_barrierAddress.empty()) {
-            try {
-                *m_serverAddress = NetworkAddress(args().m_barrierAddress, kDefaultPort);
-                m_serverAddress->resolve();
-            }
-            catch (XSocketAddress& e) {
-                // allow an address that we can't look up if we're restartable.
-                // we'll try to resolve the address each time we connect to the
-                // server.  a bad port will never get better.  patch by Brent
-                // Priddy.
-                if (!args().m_restartable || e.getError() == XSocketAddress::kBadPort) {
-                    LOG((CLOG_PRINT "%s: %s" BYE,
-                        args().m_exename.c_str(), e.what(), args().m_exename.c_str()));
+            if (args().m_barrierAddress.find(',') != std::string::npos) {
+                // Multiple comma-separated addresses: parse each and store for cycling
+                m_serverAddresses.clear();
+                m_currentAddressIndex = 0;
+                std::istringstream ss(args().m_barrierAddress);
+                std::string token;
+                while (std::getline(ss, token, ',')) {
+                    size_t start = token.find_first_not_of(" \t");
+                    size_t end   = token.find_last_not_of(" \t");
+                    if (start == std::string::npos) continue;
+                    token = token.substr(start, end - start + 1);
+                    try {
+                        m_serverAddresses.emplace_back(token, kDefaultPort);
+                        m_serverAddresses.back().resolve();
+                    }
+                    catch (XSocketAddress& e) {
+                        if (e.getError() == XSocketAddress::kBadPort) {
+                            LOG((CLOG_PRINT "%s: %s" BYE,
+                                args().m_exename.c_str(), e.what(), args().m_exename.c_str()));
+                            m_bye(kExitFailed);
+                        }
+                        // unresolvable address at startup is allowed when restartable
+                        if (!args().m_restartable) {
+                            LOG((CLOG_WARN "could not resolve address '%s': %s",
+                                token.c_str(), e.what()));
+                        }
+                    }
+                }
+                if (m_serverAddresses.empty()) {
+                    LOG((CLOG_PRINT "%s: no valid server addresses found" BYE,
+                        args().m_exename.c_str(), args().m_exename.c_str()));
                     m_bye(kExitFailed);
+                }
+                *m_serverAddress = m_serverAddresses[0];
+                LOG((CLOG_NOTE "using %zu server address(es), starting with '%s'",
+                    m_serverAddresses.size(),
+                    m_serverAddresses[0].getHostname().c_str()));
+            }
+            else {
+                // Single address: existing behavior
+                try {
+                    *m_serverAddress = NetworkAddress(args().m_barrierAddress, kDefaultPort);
+                    m_serverAddress->resolve();
+                }
+                catch (XSocketAddress& e) {
+                    // allow an address that we can't look up if we're restartable.
+                    // we'll try to resolve the address each time we connect to the
+                    // server.  a bad port will never get better.  patch by Brent
+                    // Priddy.
+                    if (!args().m_restartable || e.getError() == XSocketAddress::kBadPort) {
+                        LOG((CLOG_PRINT "%s: %s" BYE,
+                            args().m_exename.c_str(), e.what(), args().m_exename.c_str()));
+                        m_bye(kExitFailed);
+                    }
                 }
             }
         }
@@ -305,7 +347,20 @@ ClientApp::handleClientFailed(const Event& e, void*)
     else {
         LOG((CLOG_WARN "failed to connect to server: %s", info->m_what.c_str()));
         if (!m_suspended) {
-            scheduleClientRestart(nextRestartTimeout());
+            if (m_serverAddresses.size() > 1) {
+                // Cycle to the next address before retrying
+                m_currentAddressIndex = (m_currentAddressIndex + 1) % m_serverAddresses.size();
+                *m_serverAddress = m_serverAddresses[m_currentAddressIndex];
+                if (m_client != NULL) {
+                    m_client->setServerAddress(*m_serverAddress);
+                }
+                LOG((CLOG_NOTE "trying next server address: '%s'",
+                    m_serverAddress->getHostname().c_str()));
+                scheduleClientRestart(0.5);
+            }
+            else {
+                scheduleClientRestart(nextRestartTimeout());
+            }
         }
     }
     delete info;
