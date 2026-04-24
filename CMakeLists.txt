@@ -433,6 +433,14 @@ endif()
 #
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
         set (BARRIER_WIX_VERSION "${BARRIER_VERSION_MAJOR}.${BARRIER_VERSION_MINOR}.${BARRIER_VERSION_PATCH}")
+        # Multi-config generators (MSBuild/Visual Studio) place binaries in a
+        # per-config subdirectory, e.g. bin/Release/.  Single-config generators
+        # (Ninja, Makefiles) place them directly in bin/.
+        if (CMAKE_CONFIGURATION_TYPES)
+            set (BARRIER_INSTALLER_BIN_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Release")
+        else()
+            set (BARRIER_INSTALLER_BIN_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+        endif()
         message (STATUS "Configuring the wix installer")
         configure_files (${CMAKE_CURRENT_SOURCE_DIR}/dist/wix ${CMAKE_BINARY_DIR}/installer-wix)
         message (STATUS "Configuring the inno installer")
