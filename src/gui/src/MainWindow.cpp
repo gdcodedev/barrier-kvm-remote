@@ -646,7 +646,26 @@ bool MainWindow::clientArgs(QStringList& args, QString& app)
         return false;
     }
 
-    args << "[" + m_pLineEditHostname->text() + "]:" + QString::number(appConfig().port());
+    QString hostText = m_pLineEditHostname->text().trimmed();
+    if (hostText.contains(',')) {
+        // Multiple addresses: format each as host:port and join with comma
+        QStringList parts = hostText.split(',');
+        QStringList formatted;
+        for (QString part : parts) {
+            part = part.trimmed();
+            if (part.isEmpty()) continue;
+            // Append default port if no port specified (single colon = has port, no colon = no port)
+            int colonCount = part.count(':');
+            if (colonCount == 0) {
+                formatted << part + ":" + QString::number(appConfig().port());
+            } else {
+                formatted << part;
+            }
+        }
+        args << formatted.join(",");
+    } else {
+        args << "[" + hostText + "]:" + QString::number(appConfig().port());
+    }
 
     return true;
 }

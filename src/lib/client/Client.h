@@ -119,6 +119,13 @@ public:
     */
     NetworkAddress        getServerAddress() const;
 
+    //! Set address of server
+    /*!
+    Updates the server address used for the next connection attempt.
+    Used when cycling through multiple configured addresses.
+    */
+    void                setServerAddress(const NetworkAddress& addr);
+
     //! Return true if received file size is valid
     bool                isReceivedFileSizeValid();
 

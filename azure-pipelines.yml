@@ -10,7 +10,7 @@ jobs:
 - job: WinBuild
   displayName: Windows Build
   pool:
-    vmImage: 'vs2017-win2016'
+    vmImage: 'windows-latest'
   strategy:
     matrix:
       Debug:
@@ -24,9 +24,9 @@ jobs:
       inputs:
         filePath: azure-pipelines/download_install_bonjour_sdk_like.ps1
     - task: UsePythonVersion@0
-      displayName: Selecting Python Installer for QLI Installer
+      displayName: Selecting Python Installer for Qt Installer
       inputs:
-        versionSpec: '3.7'
+        versionSpec: '3.x'
     - task: PowerShell@2
       displayName: Installing QT
       condition: ne(variables['CacheRestored'], 'true')
@@ -36,7 +36,8 @@ jobs:
     - powershell: Copy-Item azure-pipelines\build_env_tmpl.bat build_env.bat
       displayName: Layering Azure Pipeline's build_env.bat
     - script: |
-          call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Enterprise\\Common7\\Tools\\vsdevcmd" -arch=x64 && clean_build.bat
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=x64 2>nul || call "C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat" -arch=x64 2>nul || call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\vsdevcmd" -arch=x64
+          clean_build.bat
       displayName: Clean Build
     - task: ArchiveFiles@2
       displayName: Archive Completed Build Directory
@@ -49,7 +50,7 @@ jobs:
       inputs:
         pathtoPublish: $(Build.ArtifactStagingDirectory)\$(CI_ENV_BUILD_TYPE).zip
         artifactName: Windows $(CI_ENV_BUILD_TYPE)
-    - script: choco install innosetup --version 5.6.1.20190126 --allow-downgrade
+    - script: choco install innosetup --version 6.2.2 --allow-downgrade
       displayName: Ensure desired version of Inno Setup is installed.
       condition: eq(variables['CI_ENV_BUILD_TYPE'], 'Release')
     - script: build_installer.bat
@@ -63,15 +64,9 @@ jobs:
         artifactName: Windows Release Installer
 
 - job: LinuxBuild
-  strategy:
-    matrix:
-      ubuntu-18.04:
-        imageName: 'ubuntu-18.04'
-      ubuntu-20.04:
-        imageName: 'ubuntu-20.04'
   displayName: Linux Build
   pool:
-    vmImage: $(imageName)
+    vmImage: 'ubuntu-latest'
   steps:
     - script: sudo apt-get update -y
     - script: sudo apt-get install -y libxtst-dev qtdeclarative5-dev libavahi-compat-libdnssd-dev libcurl4-openssl-dev
@@ -83,28 +78,17 @@ jobs:
   displayName: Mac Build
   strategy:
     matrix:
-      big-sur-Release:
-          imageName: "macOS-11"
-          B_BUILD_TYPE: Release
-          BARRIER_VERSION_STAGE: Release
-      catalina-Release:
-          imageName: "macOS-10.15"
-          B_BUILD_TYPE: Release
-          BARRIER_VERSION_STAGE: Release
-      mojave-Release:
-          imageName: "macOS-10.14"
+      macos-latest-Release:
           B_BUILD_TYPE: Release
           BARRIER_VERSION_STAGE: Release
   pool:
-    vmImage: $(imageName)
+    vmImage: 'macOS-latest'
   variables:
     VERBOSE: 1
     TERM: xterm-256color
   steps:
-    - script: rm -rf /usr/local/opt/openssl
-      displayName: Remove incompatible OpenSSL 1.0.2t from macOS-10.14 vmImage
     - script: brew reinstall openssl
-      displayName: Installed newer OpenSSL 1.1.x
+      displayName: Install newer OpenSSL
     - script: brew install pkg-config qt5
       displayName: Install Qt5 and pkg-config prereqs
     - script: sh -x ./clean_build.sh

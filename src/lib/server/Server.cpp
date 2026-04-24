@@ -330,10 +330,25 @@ Server::adoptClient(BaseClientProxy* client)
 
 	// add client to client list
 	if (!addClient(client)) {
-		// can only have one screen with a given name at any given time
-		LOG((CLOG_WARN "a client with name \"%s\" is already connected", getName(client).c_str()));
-		closeClient(client, kMsgEBusy);
-		return;
+		// A client with the same name is already registered. This typically
+		// happens when the client reconnects after a network change before
+		// the server detects the old connection is dead. Close the stale
+		// connection and accept the new one instead of rejecting it.
+		std::string name = getName(client);
+		ClientList::iterator staleIt = m_clients.find(name);
+		if (staleIt != m_clients.end() && staleIt->second != m_primaryClient) {
+			LOG((CLOG_NOTE "client \"%s\" reconnected, closing stale connection", name.c_str()));
+			closeClient(staleIt->second, kMsgEBusy);
+			if (!addClient(client)) {
+				LOG((CLOG_WARN "a client with name \"%s\" is already connected", name.c_str()));
+				closeClient(client, kMsgEBusy);
+				return;
+			}
+		} else {
+			LOG((CLOG_WARN "a client with name \"%s\" is already connected", name.c_str()));
+			closeClient(client, kMsgEBusy);
+			return;
+		}
 	}
 	LOG((CLOG_NOTE "client \"%s\" has connected", getName(client).c_str()));
 

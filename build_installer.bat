@@ -1,5 +1,14 @@
 @echo off
-set INNO_ROOT=C:\Program Files (x86)\Inno Setup 5
+REM Detect Inno Setup location (6 installed per-user, 5 installed system-wide)
+if exist "%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" (
+    set INNO_ROOT=%LOCALAPPDATA%\Programs\Inno Setup 6
+) else if exist "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" (
+    set INNO_ROOT=C:\Program Files (x86)\Inno Setup 6
+) else if exist "C:\Program Files (x86)\Inno Setup 5\ISCC.exe" (
+    set INNO_ROOT=C:\Program Files (x86)\Inno Setup 5
+) else (
+    set INNO_ROOT=C:\Program Files (x86)\Inno Setup 5
+)
 
 set savedir=%cd%
 cd /d %~dp0

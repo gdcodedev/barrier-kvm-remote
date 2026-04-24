@@ -19,11 +19,13 @@
 #pragma once
 
 #include "barrier/App.h"
+#include "net/NetworkAddress.h"
+
+#include <vector>
 
 namespace barrier { class Screen; }
 class Event;
 class Client;
-class NetworkAddress;
 class ClientArgs;
 
 class ClientApp : public App {
@@ -76,7 +78,9 @@ public:
     Client* getClientPtr() { return m_client; }
 
 private:
-    Client*            m_client;
-    barrier::Screen*m_clientScreen;
-    NetworkAddress*    m_serverAddress;
+    Client*                     m_client;
+    barrier::Screen*            m_clientScreen;
+    NetworkAddress*             m_serverAddress;
+    std::vector<NetworkAddress> m_serverAddresses;
+    size_t                      m_currentAddressIndex;
 };
